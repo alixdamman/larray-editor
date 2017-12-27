@@ -7,6 +7,7 @@ from larray import LArray, Session, zeros, empty
 from larray_editor.utils import (PY2, PYQT5, _, create_action, show_figure, ima, commonpath, dependencies,
                                  get_versions, get_documentation_url, urls)
 from larray_editor.arraywidget import ArrayEditorWidget
+from larray_editor.arrayadapter import REGISTERED_ADAPTERS
 from qtpy.QtCore import Qt, QSettings, QUrl, Slot
 from qtpy.QtGui import QDesktopServices, QKeySequence
 from qtpy.QtWidgets import (QMainWindow, QWidget, QListWidget, QListWidgetItem, QSplitter, QFileDialog, QPushButton,
@@ -38,15 +39,12 @@ except ImportError:
     qtconsole_available = False
 
 REOPEN_LAST_FILE = object()
+DISPLAY_IN_GRID = tuple(REGISTERED_ADAPTERS.keys())
 
 
 assignment_pattern = re.compile('[^\[\]]+[^=]=[^=].+')
 setitem_pattern = re.compile('(.+)\[.+\][^=]=[^=].+')
 history_vars_pattern = re.compile('_i?\d+')
-# XXX: add all scalars except strings (from numpy or plain Python)?
-# (long) strings are not handled correctly so should NOT be in this list
-# tuple, list
-DISPLAY_IN_GRID = (LArray, np.ndarray)
 
 
 class MappingEditor(QMainWindow):

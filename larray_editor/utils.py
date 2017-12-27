@@ -342,6 +342,8 @@ class Axis(object):
     def __init__(self, id, name, labels):
         if not isinstance(id, (str, int)):
             raise TypeError("id must a string or a integer")
+        if not isinstance(name, str):
+            raise TypeError("name must be a string")
         if not (hasattr(labels, '__len__') and hasattr(labels, '__getitem__')):
             raise TypeError("labels must be a list or tuple or any 1D array-like")
         self.id = id

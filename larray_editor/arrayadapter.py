@@ -578,3 +578,87 @@ class LArrayDataAdapter(AbstractAdapter):
         axes = data.axes
         for k, v in changes.items():
             data.i[axes.translate_full_key(k)] = v
+
+
+import pandas as pd
+
+@register_adapter(pd.DataFrame)
+class DataFrameAdapter(AbstractAdapter):
+    def __init__(self, data, changes, bg_value):
+        AbstractAdapter.__init__(self, data=data, changes=changes, bg_value=bg_value)
+        self.ndim = data.ndim
+        self.size = data.size
+        self.dtype = data.values.dtype
+
+    def prepare_data(self, data):
+        return data if isinstance(data, pd.DataFrame) else None
+
+    def prepare_bg_value(self, bg_value):
+        return bg_value if isinstance(bg_value, pd.DataFrame) else None
+
+    def filter_data(self, data, filter):
+        if data is None:
+            return data
+        assert isinstance(data, pd.DataFrame)
+        if filter is None:
+            return data
+        assert isinstance(filter, dict)
+        if len(filter) == 0:
+            return data
+        index_selection = filter['index'] if filter['index'] is not None else slice(None, None, None)
+        col_selection = filter['columns'] if filter['columns'] is not None else slice(None, None, None)
+        data = data.loc[index_selection, col_selection]
+        return pd.DataFrame([data]) if np.isscalar(data) else data
+
+    def get_axes(self, data):
+        assert isinstance(data, pd.DataFrame)
+        if data.size == 0:
+            return []
+        else:
+            index_name = data.index.name if data.index.name is not None else 'index'
+            index_labels = data.index.tolist()
+            columns_name = data.columns.name if data.columns.name is not None else 'columns'
+            columns_labels = data.columns.tolist()
+            return [Axis('index', index_name, index_labels), Axis('columns', columns_name, columns_labels)]
+
+    def _get_raw_data(self, data):
+        assert isinstance(data, pd.DataFrame)
+        return data.values
+
+    def _get_bg_value(self, bg_value):
+        if bg_value is not None:
+            assert isinstance(bg_value, pd.DataFrame)
+            return bg_value.values
+        else:
+            return bg_value
+
+    def from_selection(self, raw_data, axes_names, vlabels, hlabels):
+        raise NotImplementedError()
+
+    def move_axis(self, data, bg_value, old_index, new_index):
+        raise NotImplementedError()
+
+    def _map_filtered_to_global(self, filtered_data, data, filter, key):
+        frow, fcol = key
+        return (filtered_data.index[frow], filtered_data.columns[fcol])
+
+    def _map_global_to_filtered(self, data, filtered_data, filter, key):
+        row, col = key
+        index_label, col_label = data.index[row], data.columns[col]
+        frow, fcol = filtered_data.index.get_loc(index_label), filtered_data.columns.get_loc(col_label)
+        return (frow, fcol)
+
+    def change_filter(self, data, filter, axis, indices):
+        axis_id = axis.id
+        if not indices or len(indices) == len(axis):
+            if axis_id in filter:
+                del filter[axis_id]
+        else:
+            if len(indices) == 1:
+                filter[axis_id] = axis.labels[indices[0]]
+            else:
+                filter[axis_id] = axis.labels[indices]
+
+    def apply_changes(self, data, changes):
+        for k, v in changes.items():
+            data.iloc[k] = v
